@@ -33,7 +33,6 @@ AIPROXY_TOKEN = os.getenv("AIPROXY_TOKEN")
 if not AIPROXY_TOKEN:
     raise ValueError("API token not set. Please set AIPROXY_TOKEN in the environment.")
 
-
 def load_data(file_path):
     """Load CSV data with encoding detection."""
     try:
@@ -45,7 +44,6 @@ def load_data(file_path):
         print(f"Error loading file: {e}")
         sys.exit(1)
 
-
 def analyze_data(df):
     """Perform basic data analysis."""
     numeric_df = df.select_dtypes(include=['number'])  # Select only numeric columns
@@ -55,7 +53,6 @@ def analyze_data(df):
         'correlation': numeric_df.corr().to_dict()  # Compute correlation only on numeric columns
     }
     return analysis
-
 
 def visualize_data(df, output_dir):
     """Generate and save visualizations."""
@@ -67,7 +64,6 @@ def visualize_data(df, output_dir):
         plt.title(f'Distribution of {column}')
         plt.savefig(os.path.join(output_dir, f'{column}_distribution.png'))
         plt.close()
-
 
 def generate_narrative(analysis):
     """Generate narrative using LLM."""
@@ -92,19 +88,13 @@ def generate_narrative(analysis):
         print(f"An unexpected error occurred: {e}")
     return "Narrative generation failed due to an error."
 
-
 def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Analyze datasets and generate insights.")
     parser.add_argument("file_path", help="Path to the dataset CSV file.")
-    parser.add_argument("-o", "--output_dir", default=None, help="Directory to save outputs.")
-
+    parser.add_argument("-o", "--output_dir", default="output", help="Directory to save outputs.")
     args = parser.parse_args()
-    if args.output_dir is None:
-        # Extract the base name of the file without extension
-        base_name = os.path.splitext(os.path.basename(args.file_path))[0]
-        args.output_dir = base_name
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -123,7 +113,6 @@ def main():
     # Save narrative
     with open(os.path.join(args.output_dir, 'README.md'), 'w') as f:
         f.write(narrative)
-
 
 if __name__ == "__main__":
     main()
