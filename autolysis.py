@@ -19,9 +19,10 @@ import matplotlib.pyplot as plt
 import httpx
 import chardet
 from dotenv import load_dotenv
+import argparse
 
-# Force non-interactive matplotlib backend
-matplotlib.use('Agg')
+# Configure matplotlib backend
+matplotlib.use("Agg")
 
 # Load environment variables
 load_dotenv()
@@ -37,8 +38,7 @@ def load_data(file_path):
     """Load CSV data with encoding detection."""
     try:
         with open(file_path, 'rb') as f:
-            result = chardet.detect(f.read())
-        encoding = result['encoding']
+            encoding = chardet.detect(f.read())['encoding']
         return pd.read_csv(file_path, encoding=encoding)
     except Exception as e:
         print(f"Error loading file: {e}")
@@ -46,18 +46,18 @@ def load_data(file_path):
 
 def analyze_data(df):
     """Perform basic data analysis."""
-    numeric_df = df.select_dtypes(include=['number'])  # Select only numeric columns
-    analysis = {
+    numeric_df = df.select_dtypes(include=['number'])
+    return {
         'summary': df.describe(include='all').to_dict(),
         'missing_values': df.isnull().sum().to_dict(),
-        'correlation': numeric_df.corr().to_dict()  # Compute correlation only on numeric columns
+        'correlation': numeric_df.corr().to_dict()
     }
-    return analysis
 
 def visualize_data(df, output_dir):
     """Generate and save visualizations."""
     sns.set(style="whitegrid")
     numeric_columns = df.select_dtypes(include=['number']).columns
+
     for column in numeric_columns:
         plt.figure()
         sns.histplot(df[column].dropna(), kde=True)
@@ -76,43 +76,47 @@ def generate_narrative(analysis):
         "model": "gpt-4o-mini",
         "messages": [{"role": "user", "content": prompt}]
     }
+
     try:
         response = httpx.post(API_URL, headers=headers, json=data, timeout=30.0)
         response.raise_for_status()
         return response.json()['choices'][0]['message']['content']
-    except httpx.HTTPStatusError as e:
+    except (httpx.HTTPStatusError, httpx.RequestError) as e:
         print(f"HTTP error occurred: {e}")
-    except httpx.RequestError as e:
-        print(f"Request error occurred: {e}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
     return "Narrative generation failed due to an error."
 
-def main():
-    import argparse
+def save_narrative(narrative, output_dir):
+    """Save the generated narrative to a README file."""
+    readme_path = os.path.join(output_dir, 'README.md')
+    with open(readme_path, 'w') as f:
+        f.write(narrative)
 
+def parse_arguments():
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description="Analyze datasets and generate insights.")
     parser.add_argument("file_path", help="Path to the dataset CSV file.")
-    parser.add_argument("-o", "--output_dir", default="output", help="Directory to save outputs.")
-    args = parser.parse_args()
+    parser.add_argument("-o", "--output_dir", default=None, help="Directory to save outputs.")
+    return parser.parse_args()
 
+def main():
+    args = parse_arguments()
+
+    # Set output directory
+    if not args.output_dir:
+        args.output_dir = os.path.splitext(os.path.basename(args.file_path))[0]
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # Load data
+    # Process data
     df = load_data(args.file_path)
-
-    # Analyze data
     analysis = analyze_data(df)
 
-    # Visualize data
+    # Generate outputs
     visualize_data(df, args.output_dir)
-
-    # Generate narrative
     narrative = generate_narrative(analysis)
-
-    # Save narrative
-    with open(os.path.join(args.output_dir, 'README.md'), 'w') as f:
-        f.write(narrative)
+    save_narrative(narrative, args.output_dir)
 
 if __name__ == "__main__":
     main()
