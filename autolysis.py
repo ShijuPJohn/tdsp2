@@ -28,7 +28,7 @@ matplotlib.use("Agg")
 load_dotenv()
 
 # Constants
-API_URL = "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions"
+API_URL = 'https://aiproxy.sanand.workers.dev/openai/v1/chat/completions'
 AIPROXY_TOKEN = os.getenv("AIPROXY_TOKEN")
 
 if not AIPROXY_TOKEN:
